@@ -1,16 +1,56 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { createTask } from "../api/tasks.api";
+import { createTask, deleteTask, updateTask, getTask } from "../api/tasks.api";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-hot-toast";
 
 export function TaskFormPage() {
     const {
         register,
         handleSubmit,
         formState: { errors },
+        setValue,
     } = useForm();
 
+    const navigate = useNavigate();
+    const params = useParams();
+    console.log(params);
+
     const onSubmit = handleSubmit(async (data) => {
-        await createTask(data);
+        if (params.id) {
+            await updateTask(params.id, data);
+            toast.success("Tarea actualizada", {
+                position: "bottom-right",
+                style: {
+                    background: "#101010",
+                    color: "#ffffff",
+                },
+            });
+        } else {
+            await createTask(data);
+            toast.success("Tarea creada", {
+                position: "bottom-right",
+                style: {
+                    background: "#101010",
+                    color: "#ffffff",
+                },
+            });
+        }
+        navigate("/tasks");
     });
+
+    useEffect(() => {
+        async function loadTask() {
+            if (params.id) {
+                const {
+                    data: { title, description },
+                } = await getTask(params.id);
+                setValue("title", title);
+                setValue("description", description);
+            }
+        }
+        loadTask();
+    }, []);
 
     return (
         <div>
@@ -29,6 +69,26 @@ export function TaskFormPage() {
                 {errors.description && <span>description is required</span>}
                 <button>Save</button>
             </form>
+            {params.id && (
+                <button
+                    onClick={async () => {
+                        const accepted = window.confirm("Are you sure?");
+                        {
+                            accepted && (await deleteTask(params.id));
+                            toast.success("Tarea eliminada", {
+                                position: "bottom-right",
+                                style: {
+                                    background: "#101010",
+                                    color: "#ffffff",
+                                },
+                            });
+                            navigate("/tasks");
+                        }
+                    }}
+                >
+                    Delete
+                </button>
+            )}
         </div>
     );
 }
